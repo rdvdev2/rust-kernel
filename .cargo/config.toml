@@ -1,0 +1,6 @@
+[build]
+target = "i686-unknown-none.json"
+rustflags = ["-Clink-arg=link.lds"]
+
+[unstable]
+build-std = ["core", "compiler_builtins"]
