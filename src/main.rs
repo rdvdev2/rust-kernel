@@ -1,15 +1,23 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
+use core::{arch::global_asm, panic::PanicInfo};
 
 #[panic_handler]
 fn panic_handler(_: &PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle]
-extern "C" fn _start() -> ! {
+global_asm!(
+    ".global _start",
+    "_start:",
+    "mov ebp, [{} + 0x4000]",
+    "call {}",
+    sym KERNEL_STACK,
+    sym kernel_main,
+);
+
+extern "C" fn kernel_main() -> ! {
     let screen = 0xB8000 as *mut u16;
     unsafe { screen.write_volatile(0x0741) };
 
@@ -22,6 +30,9 @@ struct MultibootHeader {
     architecture: u32,
     header_length: u32,
     checksum: u32,
+    end_type: u16,
+    end_flags: u16,
+    end_size: u32,
 }
 
 #[link_section = ".multiboot"]
@@ -29,6 +40,11 @@ struct MultibootHeader {
 static MULTIBOOT_HEADER: MultibootHeader = MultibootHeader {
     magic: 0xE85250D6,
     architecture: 0,
-    header_length: 16,
-    checksum: -(0xE85250D6u32 as i32 + 16) as u32,
+    header_length: 24,
+    checksum: -(0xE85250D6u32 as i32 + 24) as u32,
+    end_type: 0,
+    end_flags: 0,
+    end_size: 0,
 };
+
+static KERNEL_STACK: [u32; 0x1000] = [0; 0x1000];
